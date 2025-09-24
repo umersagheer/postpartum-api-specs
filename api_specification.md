@@ -251,17 +251,13 @@ interface Recipe {
 **Request**
 ```http
 GET /api/recipes/recipe_001
-```
-
-**Response** `200 OK`
-```typescript
-interface RecipeDetail {
+```interface RecipeDetail {
   id: string;
   title: string;
   imageUrl: string;
   calories: number;
   prepTime: number;
-  mealTypes: string[];
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks';
   nutrition: RecipeNutrition;
   nutritionTargets?: NutritionTargets;
   instructions: string[];
@@ -284,12 +280,10 @@ interface NutritionTargets {
 }
 
 interface RecipeIngredient {
-  id: string;
   name: string;
-  icon?: string;
-  estimatedPrice?: number;
+  unit: string;
+  amount: number;
 }
-```
 
 ---
 
@@ -515,10 +509,32 @@ frontend/
 
 ## 📝 Changelog
 
-| Date | Version | Changes |
-|------|---------|---------|
-| 2025-09-22 | 1.0.0 | Initial API specification |
+| Date       | Version | Changes                                                                                                                                                                                                               |
+| ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2025-09-22 | 1.0.0   | Initial API specification                                                                                                                                                                                             |
+| 2025-09-24 | 1.1.0   | **Updated Recipe Details Type** - Changed structure of `RecipeDetail` to include `mealType`, `nutritionTargets`, and new structure for `RecipeIngredient` which now includes `name`, `unit`, and `amount` properties. |
+
 
 ---
+
+
+## Updated Recipe Details Type
+
+interface RecipeDetail {
+  id: string;
+  title: string;
+  imageUrl: string;
+  calories: number;
+  prepTime: number;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+  nutrition: RecipeNutrition;
+  nutritionTargets?: NutritionTargets;
+  instructions: string[];
+  ingredients: RecipeIngredient[];
+  isFavorited: boolean;
+  eatenToday: boolean;
+  skippedToday: boolean;
+}
+
 
 **Happy Coding! 🚀**
