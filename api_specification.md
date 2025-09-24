@@ -284,6 +284,7 @@ interface RecipeIngredient {
   unit: string;
   amount: number;
 }
+```
 
 ---
 
@@ -291,11 +292,9 @@ interface RecipeIngredient {
 **Description**: Toggle recipe favorite status  
 **Frontend Hook**: `useToggleFavorite()` (mutation)  
 **Frontend Method**: `recipeService.toggleFavorite(recipeId: string)`
-
 **Request**
 ```http
 POST /api/recipes/recipe_001/favorite
-```
 
 **Response** `200 OK`
 ```typescript
