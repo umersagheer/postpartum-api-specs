@@ -3,7 +3,7 @@
 > **Status**: Ready for Implementation
 > **Frontend**: React Native + Expo
 > **Backend**: Node.js/Express (recommended)
-> **Version**: v1.2.0
+> **Version**: v1.3.0
 > **Last Updated**: September 26, 2025
 
 This document outlines all API endpoints required by the frontend application. Each service method currently uses mock data and needs to be implemented as actual backend endpoints.
@@ -564,7 +564,7 @@ interface GetAnalyticsResponse {
   period: AnalyticsPeriod;
   totalCalories: number;
   dailyAverage: number;
-  chartData: DayData[] | WeekData[];
+  chartData: DayData[]; // Now always returns daily data for both weekly and monthly periods
 }
 
 interface MacroNutrients {
@@ -580,6 +580,8 @@ interface DayData {
   macros: MacroNutrients;
 }
 
+// NOTE: WeekData interface is deprecated as of v1.3.0
+// Monthly period now returns daily data instead of weekly aggregated data
 interface WeekData {
   week: string; // 'Week 1', 'Week 2', etc.
   startDate: string;
@@ -587,6 +589,20 @@ interface WeekData {
   calories: number;
   macros: MacroNutrients;
 }
+```
+
+**⚠️ Breaking Change (v1.3.0):**
+- **Monthly Analytics Behavior**: The monthly period now returns daily data (`DayData[]`) instead of weekly aggregated data (`WeekData[]`)
+- **Weekly Analytics**: Unchanged - still returns 7 days of daily data
+- **Monthly Analytics**: Now returns daily data for the entire month (up to 30 days)
+- **Chart Display**: Both periods use consistent bar styling with responsive spacing based on device width
+
+**Data Structure Changes:**
+- Weekly: Returns 7 `DayData` objects (unchanged)
+- Monthly: Returns up to 30 `DayData` objects (changed from 4 `WeekData` objects)
+- Labels: Monthly view displays date numbers (1, 2, 3...) instead of day letters (M, T, W...)
+
+```typescript
 ```
 
 **Example Response**
@@ -764,6 +780,7 @@ frontend/
 | 2025-09-22 | 1.0.0   | Initial API specification                                                                                                                                                                                             |
 | 2025-09-24 | 1.1.0   | **Updated Recipe Details Type** - Changed structure of `RecipeDetail` to include `mealType`, `nutritionTargets`, and new structure for `RecipeIngredient` which now includes `name`, `unit`, and `amount` properties. |
 | 2025-09-26 | 1.2.0   | **Added Analytics Service** - Added nutrition and mood analytics endpoints for weekly/monthly data tracking. **Added Recipe Search** - Added advanced recipe search with filters, pagination, and favorites count. **Enhanced RecipeIngredient** - Extended structure to include `id`, `icon`, and `estimatedPrice` properties for app-client compatibility. |
+| 2025-09-26 | 1.3.0   | **BREAKING: Analytics Monthly Behavior** - Monthly analytics now returns daily data (`DayData[]`) instead of weekly aggregated data (`WeekData[]`). Monthly period returns up to 30 daily data points. **Enhanced Chart UX** - Added responsive spacing breakpoints for different device widths. **Updated Labels** - Monthly view displays date numbers (1,2,3...) instead of day letters (M,T,W...). |
 
 
 ---
