@@ -1,9 +1,10 @@
 # 🍼 Postpartum App - Backend API Specification
 
-> **Status**: Ready for Implementation  
-> **Frontend**: React Native + Expo  
-> **Backend**: Node.js/Express (recommended)  
-> **Last Updated**: September 2025
+> **Status**: Ready for Implementation
+> **Frontend**: React Native + Expo
+> **Backend**: Node.js/Express (recommended)
+> **Version**: v1.2.0
+> **Last Updated**: September 26, 2025
 
 This document outlines all API endpoints required by the frontend application. Each service method currently uses mock data and needs to be implemented as actual backend endpoints.
 
@@ -16,6 +17,7 @@ This document outlines all API endpoints required by the frontend application. E
   - [4. Grocery Service](#4-grocery-service)
   - [5. Onboarding Service](#5-onboarding-service-️-already-implemented)
   - [6. Subscription Service](#6-subscription-service)
+- [7. Analytics Service](#7-analytics-service)
 - [Implementation Priority](#implementation-priority)
 - [Technical Requirements](#technical-requirements)
 
@@ -251,7 +253,11 @@ interface Recipe {
 **Request**
 ```http
 GET /api/recipes/recipe_001
-```interface RecipeDetail {
+```
+
+**Response** `200 OK`
+```typescript
+interface RecipeDetail {
   id: string;
   title: string;
   imageUrl: string;
@@ -280,9 +286,12 @@ interface NutritionTargets {
 }
 
 interface RecipeIngredient {
+  id: string;
   name: string;
   unit: string;
   amount: number;
+  icon?: string;
+  estimatedPrice?: number;
 }
 ```
 
@@ -320,8 +329,8 @@ POST /api/recipes/recipe_001/eaten
 ---
 
 #### POST `/api/recipes/{recipeId}/skipped`
-**Description**: Mark recipe as skipped for today  
-**Frontend Hook**: `useMarkAsSkipped()` (mutation)  
+**Description**: Mark recipe as skipped for today
+**Frontend Hook**: `useMarkAsSkipped()` (mutation)
 **Frontend Method**: `recipeService.markAsSkipped(recipeId: string)`
 
 **Request**
@@ -330,6 +339,108 @@ POST /api/recipes/recipe_001/skipped
 ```
 
 **Response** `204 No Content`
+
+---
+
+#### GET `/api/recipes/search`
+**Description**: Search recipes with advanced filters and pagination
+**Frontend Hook**: `useRecipeSearch(params: RecipeSearchParams)`
+**Frontend Method**: `recipeService.searchRecipes(params: RecipeSearchParams)`
+
+**Request**
+```http
+GET /api/recipes/search?query=oats&filters[mealTypes]=breakfast&page=1&limit=20
+```
+
+```typescript
+interface RecipeSearchParams {
+  query?: string;
+  filters?: RecipeFilters;
+  page?: number;
+  limit?: number;
+}
+
+interface RecipeFilters {
+  mealTypes?: string[];
+  dietaryRestrictions?: string[];
+  prepTime?: { min?: number; max?: number };
+  calories?: { min?: number; max?: number };
+}
+```
+
+**Response** `200 OK`
+```typescript
+interface RecipeSearchResponse {
+  recipes: RecipeDetail[];
+  pagination: PaginationMeta;
+  favoritesCount?: number;
+}
+
+interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+```
+
+**Example Response**
+```json
+{
+  "recipes": [
+    {
+      "id": "recipe_001",
+      "title": "Overnight Oats with Berries",
+      "imageUrl": "https://example.com/overnight-oats.jpg",
+      "calories": 450,
+      "prepTime": 5,
+      "mealType": "breakfast",
+      "nutrition": { "protein": 15, "fats": 12, "carbs": 65 },
+      "nutritionTargets": { "protein": 20, "fats": 15, "carbs": 70 },
+      "instructions": ["Mix oats with milk", "Add berries", "Refrigerate overnight"],
+      "ingredients": [
+        { "name": "Rolled oats", "unit": "cups", "amount": 0.5 }
+      ],
+      "isFavorited": false,
+      "eatenToday": false,
+      "skippedToday": false
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 156,
+    "hasMore": true
+  },
+  "favoritesCount": 12
+}
+```
+
+---
+
+#### GET `/api/recipes/favorites/count`
+**Description**: Get user's total favorites count
+**Frontend Hook**: `useFavoritesCount()`
+**Frontend Method**: `recipeService.getFavoritesCount()`
+
+**Request**
+```http
+GET /api/recipes/favorites/count
+```
+
+**Response** `200 OK`
+```typescript
+interface GetFavoritesCountResponse {
+  count: number;
+}
+```
+
+**Example Response**
+```json
+{
+  "count": 12
+}
+```
 
 ---
 
@@ -424,6 +535,144 @@ interface PlanDto {
 
 ---
 
+### 7. Analytics Service
+
+> **Priority**: 🟡 Medium - User insights and engagement tracking
+
+#### GET `/api/analytics/nutrition`
+**Description**: Get user's nutrition analytics data for specified period
+**Frontend Hook**: `useNutritionAnalytics(period: AnalyticsPeriod, startDate?: string)`
+**Frontend Method**: `analyticsService.getNutritionData(request: GetAnalyticsRequest)`
+
+**Request**
+```http
+GET /api/analytics/nutrition?period=week&startDate=2025-09-21
+```
+
+```typescript
+interface GetAnalyticsRequest {
+  period: AnalyticsPeriod; // 'week' | 'month'
+  startDate?: string; // ISO date string, optional
+}
+
+type AnalyticsPeriod = 'week' | 'month';
+```
+
+**Response** `200 OK`
+```typescript
+interface GetAnalyticsResponse {
+  period: AnalyticsPeriod;
+  totalCalories: number;
+  dailyAverage: number;
+  chartData: DayData[] | WeekData[];
+}
+
+interface MacroNutrients {
+  carbs: number;
+  protein: number;
+  fats: number;
+}
+
+interface DayData {
+  day: string; // 'S', 'M', 'T', 'W', 'T', 'F', 'S'
+  date: string; // '2025-09-25'
+  calories: number;
+  macros: MacroNutrients;
+}
+
+interface WeekData {
+  week: string; // 'Week 1', 'Week 2', etc.
+  startDate: string;
+  endDate: string;
+  calories: number;
+  macros: MacroNutrients;
+}
+```
+
+**Example Response**
+```json
+{
+  "period": "week",
+  "totalCalories": 5877,
+  "dailyAverage": 840,
+  "chartData": [
+    {
+      "day": "S",
+      "date": "2025-09-21",
+      "calories": 755,
+      "macros": { "carbs": 285, "protein": 189, "fats": 281 }
+    }
+  ]
+}
+```
+
+---
+
+#### GET `/api/analytics/mood`
+**Description**: Get user's mood analytics data for specified period
+**Frontend Hook**: `useMoodAnalytics(period: AnalyticsPeriod, startDate?: string)`
+**Frontend Method**: `analyticsService.getMoodData(request: GetMoodAnalyticsRequest)`
+
+**Request**
+```http
+GET /api/analytics/mood?period=month&startDate=2025-09-01
+```
+
+```typescript
+interface GetMoodAnalyticsRequest {
+  period: AnalyticsPeriod;
+  startDate?: string; // ISO date string, optional
+}
+```
+
+**Response** `200 OK`
+```typescript
+interface GetMoodAnalyticsResponse {
+  period: AnalyticsPeriod;
+  totalMoodLogs: number;
+  averageMood: MoodType | null; // most frequent mood
+  weeklyData?: DailyMoodData[];
+  monthlyData?: MonthlyMoodData[];
+}
+
+type MoodType = 'energized' | 'tired' | 'anxious' | 'not_myself' | 'overwhelmed';
+
+interface DailyMoodData {
+  day: string; // 'S', 'M', 'T', 'W', 'T', 'F', 'S'
+  date: string; // '2025-09-25'
+  mood: MoodType | null; // null if no mood logged
+}
+
+interface MonthlyMoodData {
+  mood: MoodType;
+  count: number;
+  percentage: number; // for progress bar height calculation
+}
+```
+
+**Example Response**
+```json
+{
+  "period": "month",
+  "totalMoodLogs": 24,
+  "averageMood": "energized",
+  "monthlyData": [
+    {
+      "mood": "energized",
+      "count": 9,
+      "percentage": 37.5
+    },
+    {
+      "mood": "overwhelmed",
+      "count": 17,
+      "percentage": 70.8
+    }
+  ]
+}
+```
+
+---
+
 ## 🎯 Implementation Priority
 
 ### 🔴 High Priority (Implement First)
@@ -432,11 +681,13 @@ interface PlanDto {
 3. **Recipe Service** - Required for recipe details and user interactions
 
 ### 🟡 Medium Priority (Implement Second)
-4. **Grocery Service** - Nice-to-have feature for grocery list management
-5. **Subscription Service** - Required for monetization
+4. **Recipe Search** - Advanced search functionality for better user experience
+5. **Grocery Service** - Nice-to-have feature for grocery list management
+6. **Subscription Service** - Required for monetization
+7. **Analytics Service** - User insights and engagement tracking
 
 ### ⚪ Low Priority (Optional)
-6. **Onboarding Service** - Already implemented ✅
+8. **Onboarding Service** - Already implemented ✅
 
 ---
 
@@ -512,6 +763,7 @@ frontend/
 | ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2025-09-22 | 1.0.0   | Initial API specification                                                                                                                                                                                             |
 | 2025-09-24 | 1.1.0   | **Updated Recipe Details Type** - Changed structure of `RecipeDetail` to include `mealType`, `nutritionTargets`, and new structure for `RecipeIngredient` which now includes `name`, `unit`, and `amount` properties. |
+| 2025-09-26 | 1.2.0   | **Added Analytics Service** - Added nutrition and mood analytics endpoints for weekly/monthly data tracking. **Added Recipe Search** - Added advanced recipe search with filters, pagination, and favorites count. **Enhanced RecipeIngredient** - Extended structure to include `id`, `icon`, and `estimatedPrice` properties for app-client compatibility. |
 
 
 ---
@@ -533,6 +785,15 @@ interface RecipeDetail {
   isFavorited: boolean;
   eatenToday: boolean;
   skippedToday: boolean;
+}
+
+interface RecipeIngredient {
+  id: string;
+  name: string;
+  unit: string;
+  amount: number;
+  icon?: string;
+  estimatedPrice?: number;
 }
 
 
