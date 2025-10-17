@@ -3,8 +3,8 @@
 > **Status**: Ready for Implementation
 > **Frontend**: React Native + Expo
 > **Backend**: Node.js/Express (recommended)
-> **Version**: v1.3.0
-> **Last Updated**: September 26, 2025
+> **Version**: v1.4.0
+> **Last Updated**: October 17, 2025
 
 This document outlines all API endpoints required by the frontend application. Each service method currently uses mock data and needs to be implemented as actual backend endpoints.
 
@@ -444,6 +444,250 @@ interface GetFavoritesCountResponse {
 
 ---
 
+#### POST `/api/recipes/calculate-calories`
+**Description**: Calculate nutrition information for a recipe using AI before submission
+**Frontend Hook**: `useCalculateCalories()` (mutation)
+**Frontend Method**: `recipeService.calculateCalories(data: CalculateCaloriesRequest)`
+
+**Request**
+```http
+POST /api/recipes/calculate-calories
+Content-Type: application/json
+```
+
+```typescript
+interface CalculateCaloriesRequest {
+  name: string;
+  mealType: string;
+  servingSize?: string;
+  ingredients: CalculateCaloriesIngredient[];
+  instructions: string;
+}
+
+interface CalculateCaloriesIngredient {
+  name: string;
+  amount?: number;
+  unit: string;
+}
+```
+
+**Example Request Body**
+```json
+{
+  "name": "Chicken Curry",
+  "mealType": "Dinner",
+  "servingSize": "4",
+  "ingredients": [
+    {
+      "name": "Chicken Breast",
+      "amount": 500,
+      "unit": "grams"
+    },
+    {
+      "name": "Curry Powder",
+      "amount": 2,
+      "unit": "tablespoons"
+    },
+    {
+      "name": "Coconut Milk",
+      "amount": 400,
+      "unit": "ml"
+    }
+  ],
+  "instructions": "1. Heat oil in a pan. 2. Sauté onions until golden. 3. Add chicken and curry powder..."
+}
+```
+
+**Response** `200 OK`
+```typescript
+interface CalculateCaloriesResponse {
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+  ingredientPrices?: Array<{
+    ingredientName: string;
+    estimatedPrice: number;
+  }>;
+}
+```
+
+**Example Response**
+```json
+{
+  "calories": 450,
+  "proteinGrams": 35,
+  "carbsGrams": 28,
+  "fatGrams": 22,
+  "ingredientPrices": [
+    {
+      "ingredientName": "Chicken Breast",
+      "estimatedPrice": 5.99
+    },
+    {
+      "ingredientName": "Curry Powder",
+      "estimatedPrice": 0.50
+    },
+    {
+      "ingredientName": "Coconut Milk",
+      "estimatedPrice": 2.99
+    }
+  ]
+}
+```
+
+**Notes:**
+- `servingSize` is optional but recommended for accurate per-serving calculations
+- `amount` in ingredients is optional, but including it significantly improves calculation accuracy
+- `ingredientPrices` in response is optional - backend may implement this in future releases
+- Expected response time: 2-5 seconds (AI processing)
+
+---
+
+#### POST `/api/recipes`
+**Description**: Create a new user-submitted recipe with nutrition data
+**Frontend Hook**: `useCreateRecipe()` (mutation)
+**Frontend Method**: `recipeService.createRecipe(data: CreateRecipeRequest)`
+
+**Request**
+```http
+POST /api/recipes
+Content-Type: application/json
+```
+
+```typescript
+interface CreateRecipeRequest {
+  name: string;
+  imageUrl: string;
+  mealType: string;
+  cuisineTags: string[];
+  dietaryTags?: string[];
+  servingSize: string;
+  cookingTimeMinutes: number;
+  ingredients: CreateRecipeIngredient[];
+  instructions: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  nutritionStatus: 'fresh' | 'stale';
+}
+
+interface CreateRecipeIngredient {
+  name: string;
+  amount: number;
+  unit: string;
+  estimatedPrice?: number;
+}
+```
+
+**Nutrition Status Logic:**
+- **`fresh`**: User calculated calories and submitted WITHOUT changing recipe data
+  - Backend should use provided nutrition values directly
+- **`stale`**: User changed data AFTER calculating calories
+  - Backend must recalculate nutrition with AI using the latest ingredient data
+  - Ensures accuracy of nutrition information in the database
+
+**Example Request Body**
+```json
+{
+  "name": "Chicken Curry",
+  "imageUrl": "https://cdn.postpartum.com/recipes/abc123.jpg",
+  "mealType": "Dinner",
+  "cuisineTags": ["Indian", "Asian"],
+  "dietaryTags": ["Gluten-Free"],
+  "servingSize": "4",
+  "cookingTimeMinutes": 45,
+  "ingredients": [
+    {
+      "name": "Chicken Breast",
+      "amount": 500,
+      "unit": "grams",
+      "estimatedPrice": 5.99
+    },
+    {
+      "name": "Curry Powder",
+      "amount": 2,
+      "unit": "tablespoons",
+      "estimatedPrice": 0.50
+    }
+  ],
+  "instructions": "1. Heat oil in a pan.\\n2. Sauté onions until golden.\\n3. Add chicken and curry powder...",
+  "calories": 450,
+  "protein": 35,
+  "carbs": 28,
+  "fats": 22,
+  "nutritionStatus": "fresh"
+}
+```
+
+**Response** `201 Created`
+```typescript
+interface CreateRecipeResponse {
+  id: string;
+  userId: string;
+  name: string;
+  imageUrl: string;
+  mealType: string;
+  cuisineTags: string[];
+  dietaryTags: string[];
+  servingSize: string;
+  cookingTimeMinutes: number;
+  ingredients: CreateRecipeIngredient[];
+  instructions: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+**Example Response**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "userId": "user_abc123",
+  "name": "Chicken Curry",
+  "imageUrl": "https://cdn.postpartum.com/recipes/abc123.jpg",
+  "mealType": "Dinner",
+  "cuisineTags": ["Indian", "Asian"],
+  "dietaryTags": ["Gluten-Free"],
+  "servingSize": "4",
+  "cookingTimeMinutes": 45,
+  "ingredients": [
+    {
+      "name": "Chicken Breast",
+      "amount": 500,
+      "unit": "grams",
+      "estimatedPrice": 5.99
+    },
+    {
+      "name": "Curry Powder",
+      "amount": 2,
+      "unit": "tablespoons",
+      "estimatedPrice": 0.50
+    }
+  ],
+  "instructions": "1. Heat oil in a pan.\\n2. Sauté onions until golden.\\n3. Add chicken and curry powder...",
+  "calories": 520,
+  "protein": 42,
+  "carbs": 28,
+  "fats": 26,
+  "createdAt": "2025-10-17T14:30:00Z",
+  "updatedAt": "2025-10-17T14:30:00Z"
+}
+```
+
+**Notes:**
+- Image must be uploaded to CDN/S3 before calling this endpoint
+- If `nutritionStatus` is `stale`, backend recalculates and returns fresh values
+- After successful creation, recipe appears in user's "My Recipes" list
+- Frontend automatically invalidates `QUERY_KEYS.recipes.myRecipes.all`
+
+---
+
 ### 4. Grocery Service
 
 > **Priority**: 🟡 Medium - Grocery list management
@@ -781,6 +1025,7 @@ frontend/
 | 2025-09-24 | 1.1.0   | **Updated Recipe Details Type** - Changed structure of `RecipeDetail` to include `mealType`, `nutritionTargets`, and new structure for `RecipeIngredient` which now includes `name`, `unit`, and `amount` properties. |
 | 2025-09-26 | 1.2.0   | **Added Analytics Service** - Added nutrition and mood analytics endpoints for weekly/monthly data tracking. **Added Recipe Search** - Added advanced recipe search with filters, pagination, and favorites count. **Enhanced RecipeIngredient** - Extended structure to include `id`, `icon`, and `estimatedPrice` properties for app-client compatibility. |
 | 2025-09-26 | 1.3.0   | **BREAKING: Analytics Monthly Behavior** - Monthly analytics now returns daily data (`DayData[]`) instead of weekly aggregated data (`WeekData[]`). Monthly period returns up to 30 daily data points. **Enhanced Chart UX** - Added responsive spacing breakpoints for different device widths. **Updated Labels** - Monthly view displays date numbers (1,2,3...) instead of day letters (M,T,W...). |
+| 2025-10-17 | 1.4.0   | **Added User Recipe Creation** - Added two new endpoints for user-submitted recipes: `POST /api/recipes/calculate-calories` for AI-powered nutrition calculation and `POST /api/recipes` for creating recipes. **Nutrition Status Logic** - Implemented fresh/stale status tracking to ensure accurate nutrition data. **Frontend Integration** - Added complete TypeScript types (`CalculateCaloriesRequest`, `CalculateCaloriesResponse`, `CreateRecipeRequest`, `CreateRecipeResponse`), service methods, and React Query hooks (`useCalculateCalories()`, `useCreateRecipe()`). |
 
 
 ---
